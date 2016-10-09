@@ -92,7 +92,7 @@ public final class Context {
         context = zmq_ctx_new()
 
         if context == nil {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
@@ -103,7 +103,7 @@ public final class Context {
 
     public func terminate() throws {
         if zmq_ctx_term(context) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
@@ -118,7 +118,7 @@ public final class Context {
     public func socket(_ type: SocketType) throws -> Socket {
 
         guard let socket = zmq_socket(context, type.rawValue) else {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
 
         return try Socket(socket: socket)

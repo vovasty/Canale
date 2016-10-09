@@ -24,11 +24,11 @@
 
 import CZeroMQ
 
-public struct ZeroMqError : Error, CustomStringConvertible {
+public struct Error : Swift.Error, CustomStringConvertible {
     public let description: String
 
     static var lastError: Error {
         let description = String(validatingUTF8: zmq_strerror(zmq_errno()))!
-        return ZeroMqError(description: description)
+        return Error(description: description)
     }
 }

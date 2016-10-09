@@ -45,7 +45,7 @@ class Poller {
         }
     }
     
-    private func notifyAll(_ error: Error) {
+    private func notifyAll(_ error: Swift.Error) {
         while counter > 0 {
             counter -= 1
             channel.send(error)
@@ -62,7 +62,7 @@ class Poller {
                     self.polling = false
                     
                     guard ev.contains(self.events) else {
-                        self.notifyAll(ZeroMqError(description: "Unable to poll"))
+                        self.notifyAll(Error(description: "Unable to poll"))
                         return
                     }
                     
@@ -80,7 +80,7 @@ class Poller {
     }
     
     func shutdown() {
-        notifyAll(ZeroMqError(description: "Unable to poll"))
+        notifyAll(Error(description: "Unable to poll"))
         
         assert(!polling)
         assert(counter == 0)

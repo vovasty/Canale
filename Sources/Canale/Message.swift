@@ -31,7 +31,7 @@ public final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init(&message) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
@@ -39,7 +39,7 @@ public final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init_size(&message, size) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
@@ -47,7 +47,7 @@ public final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init_data(&message, data, size, ffn, hint) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
@@ -55,7 +55,7 @@ public final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init_data(&message, data, size, nil, nil) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
@@ -73,7 +73,7 @@ public final class Message {
 
     public func getProperty(_ property: String) throws -> String {
         guard let result = zmq_msg_gets(&message, property) else {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
 
         return String(validatingUTF8: result)!
@@ -81,7 +81,7 @@ public final class Message {
 
     public func close() throws {
         if zmq_msg_close(&message) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
@@ -101,7 +101,7 @@ public final class Message {
         let message = try Message()
 
         if zmq_msg_copy(&message.message, &self.message) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
 
         return message
@@ -111,7 +111,7 @@ public final class Message {
         let message = try Message()
 
         if zmq_msg_move(&message.message, &self.message) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 }

@@ -80,19 +80,19 @@ public final class Socket {
 
     func setOption(_ option: Int32, value: UnsafeRawPointer?, length: Int) throws {
         if zmq_setsockopt(socket, option, value, length) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
     func getOption(_ option: Int32, value: UnsafeMutableRawPointer, length: UnsafeMutablePointer<Int>) throws {
         if zmq_getsockopt(socket, option, value, length) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
 
     public func bind(_ endpoint: String) throws {
         if zmq_bind(socket, endpoint) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
         
         poller = Poller(fd: try getFileDescriptor(), events: .read)
@@ -100,7 +100,7 @@ public final class Socket {
 
     public func connect(_ endpoint: String) throws {
         if zmq_connect(socket, endpoint) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
         
         poller = Poller(fd: try getFileDescriptor(), events: .read)
@@ -109,19 +109,19 @@ public final class Socket {
     public func send(_ message: Message, mode: SendMode = []) throws {
         let result = zmq_msg_send(&message.message, socket, Int32(mode.rawValue))
         
-        if result == -1 { throw ZeroMqError.lastError }
+        if result == -1 { throw Error.lastError }
     }
     
     func send(_ buffer: UnsafeMutableRawPointer, length: Int, mode: SendMode = []) throws {
         let result = zmq_send(socket, buffer, length, Int32(mode.rawValue))
         
-        if result == -1 { throw ZeroMqError.lastError }
+        if result == -1 { throw Error.lastError }
     }
     
     func sendImmutable(_ buffer: UnsafeRawPointer, length: Int, mode: SendMode = []) throws {
         let result = zmq_send_const(socket, buffer, length, Int32(mode.rawValue))
 
-        if result == -1 { throw ZeroMqError.lastError }
+        if result == -1 { throw Error.lastError }
     }
 
     public func receiveMessage(_ mode: ReceiveMode = []) throws -> Message {
@@ -158,7 +158,7 @@ public final class Socket {
         poller?.shutdown()
         poller = nil
         if zmq_close(socket) == -1 {
-            throw ZeroMqError.lastError
+            throw Error.lastError
         }
     }
     
@@ -167,7 +167,7 @@ public final class Socket {
         let result = try closure()
         
         guard result == -1 else { return result }
-        guard zmq_errno() == EAGAIN else { throw ZeroMqError.lastError }
+        guard zmq_errno() == EAGAIN else { throw Error.lastError }
         
         while true {
             try poller?.poll()
@@ -175,7 +175,7 @@ public final class Socket {
             let result = try closure()
             
             guard result == -1 else { return result }
-            guard zmq_errno() == EAGAIN else { throw ZeroMqError.lastError }
+            guard zmq_errno() == EAGAIN else { throw Error.lastError }
         }
     }
 }
@@ -704,7 +704,7 @@ extension SecurityMechanism {
 extension Socket {
     public func send(_ string: String, mode: SendMode = []) throws {
         guard let data = string.data(using: .utf8) else {
-            throw ZeroMqError(description: "Unable to convert string")
+            throw Error(description: "Unable to convert string")
         }
         try send(data, mode: mode)
     }
