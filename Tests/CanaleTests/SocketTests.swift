@@ -27,6 +27,22 @@ import Venice
 @testable import Canale
 
 class SocketTests: XCTestCase {
+    func testTimeout() throws {
+        let context = try Context()
+        let socket = try context.socket(.pull)
+        try socket.setReceiveTimeout(100)
+        try socket.setSendTimeout(100)
+        try socket.bind("inproc://test")
+        
+        do {
+            _ = try socket.receiveString()
+            XCTFail()
+        }
+        catch {
+            XCTAssertNotNil(error)
+        }
+    }
+    
     func testPushPull() throws {
         var called = false
         let context = try Context()

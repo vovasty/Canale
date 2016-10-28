@@ -53,12 +53,12 @@ class Poller {
     }
     
     
-    func poll() throws {
+    func poll(deadline: Double) throws {
         if !polling {
             co {
                 do {
                     self.polling = true
-                    let ev = try Venice.poll(self.fd, events: self.events, deadline: -1)
+                    let ev = try Venice.poll(self.fd, events: self.events, deadline: deadline)
                     self.polling = false
                     
                     guard ev.contains(self.events) else {
@@ -69,6 +69,7 @@ class Poller {
                     self.notifyAll()
                 }
                 catch {
+                    self.polling = false
                     self.notifyAll(error)
                     return
                 }
