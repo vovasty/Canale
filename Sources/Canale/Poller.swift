@@ -25,10 +25,6 @@
 import Foundation
 import Venice
 
-public enum PollerError: Swift.Error {
-    case alreadyPolling
-}
-
 class Poller {
     private let channel = try! Channel<Void>()
     private var counter: Int = 0
