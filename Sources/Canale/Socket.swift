@@ -167,9 +167,10 @@ public final class Socket {
         
         guard result == -1 else { return result }
         guard zmq_errno() == EAGAIN else { throw Error.lastError }
+        let timeout = Int(max((try? self.getReceiveTimeout()) ?? 0, (try? self.getSendTimeout()) ?? 0))
         
         while true {
-            try poller?.poll(deadline: .never)
+            try poller?.poll(deadline: timeout == -1 ? Deadline.never : timeout.millisecond.fromNow())
             
             let result = try closure()
             
