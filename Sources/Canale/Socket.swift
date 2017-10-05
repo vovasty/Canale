@@ -25,7 +25,6 @@
 import CZeroMQ
 import Foundation
 import Venice
-import CLibvenice
 
 struct PollEvent : OptionSet {
     public let rawValue: Int16
@@ -73,7 +72,7 @@ public final class Socket {
 
     deinit {
         //release poller before closing the socket.
-        poller?.shutdown()
+        try? poller?.shutdown()
         poller = nil
         zmq_close(socket)
     }
@@ -155,7 +154,7 @@ public final class Socket {
     }
     public func close() throws {
         //release poller before closing the socket.
-        poller?.shutdown()
+        try poller?.shutdown()
         poller = nil
         if zmq_close(socket) == -1 {
             throw Error.lastError
@@ -170,7 +169,7 @@ public final class Socket {
         guard zmq_errno() == EAGAIN else { throw Error.lastError }
         
         while true {
-            try poller?.poll()
+            try poller?.poll(deadline: .never)
             
             let result = try closure()
             
@@ -204,11 +203,11 @@ public struct SocketEvent : OptionSet {
 extension Socket {
     func setOption(_ option: Int32, _ value: Bool) throws {
         var value = value ? 1 : 0
-        try setOption(option, value: &value, length: strideof(Int32.self))
+        try setOption(option, value: &value, length: MemoryLayout<Int32>.stride)
     }
     func setOption(_ option: Int32, _ value: Int32) throws {
         var value = value
-        try setOption(option, value: &value, length: strideof(Int32.self))
+        try setOption(option, value: &value, length: MemoryLayout<Int32>.stride)
     }
     func setOption(_ option: Int32, _ value: String) throws {
         try value.withCString { v in
@@ -234,7 +233,7 @@ extension Socket {
 extension Socket {
     public func setAffinity(_ value: UInt64) throws {
         var value = value
-        try setOption(ZMQ_AFFINITY, value: &value, length: strideof(UInt64.self))
+        try setOption(ZMQ_AFFINITY, value: &value, length: MemoryLayout<UInt64>.stride)
     }
 
     public func setBacklog(_ value: Int32) throws {
@@ -323,7 +322,7 @@ extension Socket {
 
     public func setMaxMessageSize(_ value: Int64) throws {
         var value = value
-        try setOption(ZMQ_MAXMSGSIZE, value: &value, length: strideof(Int64.self))
+        try setOption(ZMQ_MAXMSGSIZE, value: &value, length: MemoryLayout<Int64>.stride)
     }
 
     public func setMulticastHops(_ value: Int32) throws {
@@ -470,7 +469,7 @@ extension Socket {
 extension Socket {
     func getOption(_ option: Int32) throws -> Int32 {
         var value: Int32 = 0
-        var length = strideof(Int32.self)
+        var length = MemoryLayout<Int32>.stride
         try getOption(option, value: &value, length: &length)
         return value
     }
@@ -489,7 +488,7 @@ extension Socket {
 extension Socket {
     public func getAffinity() throws -> UInt64 {
         var value: UInt64 = 0
-        var length = strideof(UInt64.self)
+        var length = MemoryLayout<Int64>.stride
         try getOption(ZMQ_AFFINITY, value: &value, length: &length)
         return value
     }
@@ -573,7 +572,7 @@ extension Socket {
 
     public func getMaxMessageSize() throws -> Int64 {
         var value: Int64 = 0
-        var length = strideof(Int64.self)
+        var length = MemoryLayout<Int64>.stride
         try getOption(ZMQ_MAXMSGSIZE, value: &value, length: &length)
         return value
     }

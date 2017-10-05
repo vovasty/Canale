@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "CLibdill",
+        "repositoryURL": "https://github.com/Zewo/CLibdill.git",
+        "state": {
+          "branch": null,
+          "revision": "323b1297c4390a19203a5778d050bcc01c64cc5a",
+          "version": "1.6.0"
+        }
+      },
+      {
+        "package": "CZeroMQ",
+        "repositoryURL": "https://github.com/Zewo/CZeroMQ.git",
+        "state": {
+          "branch": null,
+          "revision": "d7630758ece813c8a707f8630ba34607e0318590",
+          "version": "1.0.3"
+        }
+      },
+      {
+        "package": "Venice",
+        "repositoryURL": "https://github.com/Zewo/Venice.git",
+        "state": {
+          "branch": null,
+          "revision": "fce565fe5199f14b6d6f783ea5282229eeee40b1",
+          "version": "0.19.2"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

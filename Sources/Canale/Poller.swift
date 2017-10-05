@@ -24,71 +24,70 @@
 
 import Foundation
 import Venice
-import CLibvenice
+
+public enum PollerError: Swift.Error {
+    case alreadyPolling
+}
 
 class Poller {
-    private let channel = FallibleChannel<Void>()
+    private let channel = try! Channel<Void>()
     private var counter: Int = 0
-    private let fd: Int32
-    private let events: Venice.PollEvent
+    private let fd: FileDescriptor.Handle
+    private let events: FileDescriptor.PollEvent
+    private var pollingCoroutine: Coroutine?
     private var polling = false
     
-    init(fd: Int32, events: Venice.PollEvent) {
+    init(fd: FileDescriptor.Handle, events: FileDescriptor.PollEvent) {
         self.fd = fd
         self.events = events
     }
     
-    private func notifyAll() {
+    private func notifyAll() throws {
         while counter > 0 {
             counter -= 1
-            channel.send()
+            try channel.send(deadline: .never)
         }
     }
     
-    private func notifyAll(_ error: Swift.Error) {
+    private func notifyAll(_ error: Swift.Error) throws {
         while counter > 0 {
             counter -= 1
-            channel.send(error)
+            try channel.send(error, deadline: .never)
         }
     }
     
     
-    func poll() throws {
+    func poll(deadline: Deadline) throws {
+        
         if !polling {
-            co {
+            pollingCoroutine = try Coroutine {
+                defer { self.polling = false }
+                
                 do {
                     self.polling = true
-                    let ev = try Venice.poll(self.fd, events: self.events, deadline: -1)
-                    self.polling = false
-                    
-                    guard ev.contains(self.events) else {
-                        self.notifyAll(Error(description: "Unable to poll"))
-                        return
-                    }
-                    
-                    self.notifyAll()
+                    try FileDescriptor.poll(self.fd, event: self.events, deadline: deadline)
+                    try self.notifyAll()
                 }
                 catch {
-                    self.notifyAll(error)
-                    return
+                    try self.notifyAll(error)
                 }
             }
         }
         
         counter += 1
-        try channel.receive()
+        try channel.receive(deadline: .never)
     }
     
-    func shutdown() {
-        notifyAll(Error(description: "Unable to poll"))
-        
-        assert(!polling)
+    func shutdown() throws {
+        try notifyAll(Error(description: "Unable to poll"))
+        pollingCoroutine?.cancel()
+        pollingCoroutine = nil
         assert(counter == 0)
         
-        yield
+        try Coroutine.yield()
     }
     
     deinit {
-        fdclean(fd)
+        FileDescriptor.clean(fd)
     }
 }

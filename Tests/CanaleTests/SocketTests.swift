@@ -32,13 +32,13 @@ class SocketTests: XCTestCase {
         let context = try Context()
         
         let outbound = try context.socket(.push)
-        try outbound.connect("tcp://127.0.0.1:5555")
+        try outbound.connect("inproc://testPushPull")
         
         try outbound.send("Hello World!")
         try outbound.send("Bye!")
 
         let inbound = try context.socket(.pull)
-        try inbound.bind("tcp://127.0.0.1:5555")
+        try inbound.bind("inproc://testPushPull")
 
         while let data = try inbound.receiveString() , data != "Bye!" {
             called = true
@@ -53,14 +53,12 @@ class SocketTests: XCTestCase {
         
         let context = try Context()
         
-        var received = 0
-        let completed = Channel<Void>()
-        
+        let serverGroup = Coroutine.Group()
         let server = try context.socket(.router)
-        try server.bind("inproc://test")
+        try server.bind("inproc://testRouterDealer")
         
         for _ in 0..<numClients {
-            co {
+            try serverGroup.addCoroutine {
                 do {
                     let id = try server.receiveMessage(.ReceiveMore)
                     
@@ -77,11 +75,15 @@ class SocketTests: XCTestCase {
             }
         }
         
+        let clientGroup = Coroutine.Group()
+        let client = try context.socket(.dealer)
+        try client.connect("inproc://testRouterDealer")
+        var received = 0
+        let completed = try Channel<Void>()
+        
         for _ in 0..<numClients {
-            co {
+            try clientGroup.addCoroutine {
                 do {
-                    let client = try context.socket(.dealer)
-                    try client.connect("inproc://test")
                     try! client.send("How are you?")
                     let reply = try client.receiveString()
                     XCTAssertEqual("I am good", reply)
@@ -89,7 +91,7 @@ class SocketTests: XCTestCase {
                     received += 1
                     
                     if received == numClients {
-                        completed.send()
+                        try completed.send(deadline: 1.second.fromNow())
                     }
                 }
                 catch {
@@ -98,7 +100,7 @@ class SocketTests: XCTestCase {
             }
         }
         
-        completed.receive()
+        try completed.receive(deadline: 10.second.fromNow())
         
     }
     
@@ -109,16 +111,15 @@ class SocketTests: XCTestCase {
         let context = try Context()
         
         var received = 0
-        let completed = Channel<Void>()
+        let completed = try Channel<Void>()
         
-        let server = try context.socket(.router)
-        try server.bind("inproc://test")
+        let client = try context.socket(.dealer)
+        try client.connect("inproc://testRouterDealer1")
+        let clientGroup = Coroutine.Group()
         
         for _ in 0..<numClients {
-            co {
+            try clientGroup.addCoroutine {
                 do {
-                    let client = try context.socket(.dealer)
-                    try client.connect("inproc://test")
                     try! client.send("How are you?")
                     let reply = try client.receiveString()
                     XCTAssertEqual("I am good", reply)
@@ -126,7 +127,7 @@ class SocketTests: XCTestCase {
                     received += 1
                     
                     if received == numClients {
-                        completed.send()
+                        try completed.send(deadline: 1.second.fromNow())
                     }
                 }
                 catch {
@@ -134,6 +135,9 @@ class SocketTests: XCTestCase {
                 }
             }
         }
+        
+        let server = try context.socket(.router)
+        try server.bind("inproc://testRouterDealer1")
 
         for _ in 0..<numClients {
             do {
@@ -151,7 +155,7 @@ class SocketTests: XCTestCase {
             }
         }
         
-        completed.receive()
+        try completed.receive(deadline: 10.second.fromNow())
     }
 
     
@@ -160,17 +164,13 @@ class SocketTests: XCTestCase {
         
         var context: Context! = try Context()
         
-        let completed = Channel<Void>()
+        let completed = try Channel<Void>()
         
         var rep: Socket! = try context.socket(.rep)
-        try rep.bind("inproc://test")
+        try rep.bind("inproc://testReqRep")
+        let group = Coroutine.Group()
         
-        var completedDialogues = 0
-        var req: Socket! = try context.socket(.req)
-        try req.connect("inproc://test")
-
-
-        co {
+        try group.addCoroutine {
             for _ in 0..<numClients {
                 do {
                     let query = try rep.receiveString()
@@ -183,19 +183,23 @@ class SocketTests: XCTestCase {
             }
         }
         
+        
+        var received = 0
+        var req: Socket! = try context.socket(.req)
+        try req.connect("inproc://testReqRep")
 
-        co {
+        try group.addCoroutine {
             for _ in 0..<numClients {
-                nap(for: 1)
+                try Coroutine.wakeUp(1.millisecond.fromNow())
                 do {
                     try req.send("Hi!")
                     let query = try req.receiveString()
                     XCTAssertEqual(query, "Bye!")
                     
-                    completedDialogues += 1
+                    received += 1
                     
-                    if numClients <= completedDialogues {
-                        completed.send()
+                    if numClients == received {
+                        try completed.send(deadline: 1.second.fromNow())
                     }
                 }
                 catch {
@@ -205,7 +209,7 @@ class SocketTests: XCTestCase {
         }
         
         
-        completed.receive()
+        try completed.receive(deadline: (numClients + 1).second.fromNow())
 
         //TODO: need to release sockets before context, otherwise zmq_ctx_term might hang
         req = nil
